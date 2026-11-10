@@ -104,7 +104,11 @@ export class AudioEngine {
           ? decodeWavPcm(this.ctx, ab)
           : await this.ctx.decodeAudioData(ab);
       } catch (e) {
-        throw new Error('Decoding failed for ' + name + ' (' + file + '): ' + (e && e.message || e));
+        // The song is essential; a broken sfx/voice must never kill boot.
+        if (name === 'song') {
+          throw new Error('Decoding failed for ' + name + ' (' + file + '): ' + (e && e.message || e));
+        }
+        console.warn('audio: skipping undecodable', name, file, e);
       }
     }));
     return this;
