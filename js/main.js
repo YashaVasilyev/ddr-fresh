@@ -22,6 +22,7 @@ async function boot() {
   for (const [file, name] of Object.entries(MANIFEST)) {
     if (loaded.images[name]) byFile[file] = loaded.images[name];
   }
+  if (loaded.images['background']) byFile['background'] = loaded.images['background'];
 
   window.__bootStage = 'render';
   const render = new Renderer(canvas, byFile);

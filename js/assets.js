@@ -158,6 +158,18 @@ export async function loadAssets(onProgress) {
   });
 
   await Promise.all(jobs);
+
+  // Optional custom playfield background: assets/background.png or .jpg.
+  // Not part of the manifest — absent file is fine.
+  for (const f of ['background.png', 'background.jpg']) {
+    const ok = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = BASE + f;
+    });
+    if (ok) { images['background'] = ok; break; }
+  }
   return { images, audio };
 }
 

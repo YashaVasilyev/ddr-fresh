@@ -141,7 +141,8 @@ export class Renderer {
   // ('menu' | 'game' | 'results' | ...) or a raw md5ext.
   drawBackdrop(name) {
     const key = BACKDROPS[name] || name;
-    const im = this.img(key);
+    // A custom assets/background.(png|jpg) replaces the playfield backdrop.
+    const im = (name === 'game' && this.assets['background']) || this.img(key);
     if (im && im.complete && im.naturalWidth > 0) {
       this.ctx.drawImage(im, 0, 0, STAGE_W, STAGE_H);
     } else {
