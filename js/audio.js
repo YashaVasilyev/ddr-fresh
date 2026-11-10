@@ -28,6 +28,50 @@ const FILES = {
   E:    '03101601304b97f6445728f528ef1168.mp3', // reuse Voice (128)
 };
 
+// Decode a RIFF/WAVE PCM buffer manually into an AudioBuffer. Some browsers
+// (notably Safari) reject certain PCM WAVs in decodeAudioData, so WAVs are
+// decoded by hand instead. Supports 8/16/24/32-bit int PCM and 32-bit float.
+function decodeWavPcm(ctx, ab) {
+  const dv = new DataView(ab);
+  const readU32 = (o) => dv.getUint32(o, true);
+  const readU16 = (o) => dv.getUint16(o, true);
+  if (dv.getUint32(0, false) !== 0x52494646 || dv.getUint32(8, false) !== 0x57415645) { // 'RIFF' 'WAVE'
+    throw new Error('not a RIFF/WAVE file');
+  }
+  let fmt = null, dataOff = -1, dataLen = 0;
+  for (let o = 12; o + 8 <= ab.byteLength; o += 8 + readU32(o + 4)) {
+    const id = dv.getUint32(o, false);
+    if (id === 0x666d7420) { // 'fmt '
+      fmt = {
+        format: readU16(o + 8),
+        channels: readU16(o + 10),
+        sampleRate: readU32(o + 12),
+        bits: readU16(o + 22),
+      };
+    } else if (id === 0x64617461) { // 'data'
+      dataOff = o + 8;
+      dataLen = Math.min(readU32(o + 4), ab.byteLength - dataOff);
+    }
+  }
+  if (!fmt || dataOff < 0) throw new Error('missing fmt/data chunk');
+  const bytesPerSample = fmt.bits / 8;
+  const frames = Math.floor(dataLen / (bytesPerSample * fmt.channels));
+  const buf = ctx.createBuffer(fmt.channels, frames, fmt.sampleRate);
+  for (let ch = 0; ch < fmt.channels; ch++) {
+    const out = buf.getChannelData(ch);
+    for (let i = 0; i < frames; i++) {
+      const o = dataOff + (i * fmt.channels + ch) * bytesPerSample;
+      if (fmt.format === 3 && fmt.bits === 32) out[i] = dv.getFloat32(o, true);
+      else if (fmt.bits === 8) out[i] = (dv.getUint8(o) - 128) / 128;
+      else if (fmt.bits === 16) out[i] = dv.getInt16(o, true) / 32768;
+      else if (fmt.bits === 24) out[i] = (dv.getUint8(o) | (dv.getUint8(o + 1) << 8) | (dv.getInt8(o + 2) << 16)) / 8388608;
+      else if (fmt.bits === 32) out[i] = dv.getInt32(o, true) / 2147483648;
+      else throw new Error('unsupported bit depth ' + fmt.bits);
+    }
+  }
+  return buf;
+}
+
 export class AudioEngine {
   constructor(baseUrl = BASE_URL) {
     this.baseUrl = baseUrl;
@@ -53,8 +97,15 @@ export class AudioEngine {
     await Promise.all(Object.entries(FILES).map(async ([name, file]) => {
       if (this.buffers[name]) return;
       const res = await fetch(this.baseUrl + file);
+      if (!res.ok) throw new Error(name + ': HTTP ' + res.status + ' for ' + file);
       const ab = await res.arrayBuffer();
-      this.buffers[name] = await this.ctx.decodeAudioData(ab);
+      try {
+        this.buffers[name] = /\.wav$/i.test(file)
+          ? decodeWavPcm(this.ctx, ab)
+          : await this.ctx.decodeAudioData(ab);
+      } catch (e) {
+        throw new Error('Decoding failed for ' + name + ' (' + file + '): ' + (e && e.message || e));
+      }
     }));
     return this;
   }
