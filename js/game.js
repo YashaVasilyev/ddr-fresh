@@ -20,8 +20,16 @@ const WINDOWS = (() => {                                     // seconds, |dt| at
   if (ms) { const o = {}; for (const k of Object.keys(ms)) o[k] = ms[k] / 1000; return o; }
   return C('JUDGE_WINDOWS', { marvelous: 0.045, perfect: 0.090, great: 0.135, good: 0.180, miss: 0.220 });
 })();
-const SCORE_BASE = C('TIER_SCORE', C('SCORE_BASE', { marvelous: 300, perfect: 200, great: 100, good: 50 }));
-const COMBO_DIVISOR = C('COMBO_MULT_DIV', C('COMBO_DIVISOR', 50)); // multiplier = 1 + combo/50
+// Scoring (matches the original): per-note base of SCORE_MAX / noteCount,
+// perfect/great pay a flat -10, good/miss pay 0. Combo does NOT multiply score.
+const SCORE_MAX = 1e6;
+function scoreDeltaFor(tier, noteCount) {
+  const per = SCORE_MAX / noteCount;
+  if (tier === 'marvelous') return per;
+  if (tier === 'perfect') return per - 10;
+  if (tier === 'great') return per / 2 - 10;
+  return 0;
+}
 const COMBO_KEEP_TIERS = C('COMBO_KEEP_TIERS', ['marvelous', 'perfect', 'great']);
 const HEALTH_START = C('HEALTH_START', 50);
 const HEALTH_MAX = C('HEALTH_MAX', 100);
@@ -29,11 +37,11 @@ const HEALTH_DELTA = C('HEALTH_DELTA', {
   marvelous: 2, perfect: 1.5, great: 1, good: -4, miss: -10,
 });
 const CLEAR_PAD = C('CLEAR_PAD', 1);                          // clear at duration + 1s
-const GRADES = C('GRADES', C('GRADE_THRESHOLDS', [           // by score%, descending
-  { min: 95, grade: 'AAAA' }, { min: 90, grade: 'AAA' }, { min: 85, grade: 'AA' },
-  { min: 70, grade: 'A' }, { min: 55, grade: 'B' }, { min: 40, grade: 'C' },
-  { min: 0, grade: 'D' },
-])).map(g => ({ min: g.min > 1 ? g.min / 100 : g.min, grade: g.grade })); // accept % or fraction
+const GRADES = C('GRADES', C('GRADE_THRESHOLDS', [           // absolute score, descending
+  { min: 999999, grade: 'AAAA' }, { min: 989999, grade: 'AAA' }, { min: 949999, grade: 'AA' },
+  { min: 799999, grade: 'A' }, { min: 649999, grade: 'B' }, { min: 499999, grade: 'C' },
+  { min: -Infinity, grade: 'D' },
+]));
 
 export const TIERS = C('TIERS', ['marvelous', 'perfect', 'great', 'good', 'miss']);
 export const LANES = Object.freeze({ left: 0, down: 1, up: 2, right: 3 });
@@ -108,24 +116,12 @@ export function createGame(opts = {}) {
     return BASE_SPEED * (1 + ramp);
   }
 
-  // Max achievable score: every note Marvelous (combo grows per note, multiplier
-  // uses the combo value before the current note increments it).
-  function maxScoreFor(notes) {
-    let s = 0, c = 0;
-    for (let i = 0; i < notes.length; i++) {
-      s += SCORE_BASE.marvelous * (1 + c / COMBO_DIVISOR);
-      c++;
-    }
-    return s;
-  }
-
   function applyJudgment(note, tier, lane) {
     note.hit = true;                 // consumes the note (jump pair = same object)
     if (tier === 'miss') note.missed = true;
     game.counts[tier] = (game.counts[tier] || 0) + 1;
 
-    const base = SCORE_BASE[tier] || 0;
-    const delta = Math.round(base * (1 + game.combo / COMBO_DIVISOR));
+    const delta = scoreDeltaFor(tier, game.notes.length);
     game.score += delta;
 
     if (COMBO_KEEP_TIERS.includes(tier)) {
@@ -148,17 +144,14 @@ export function createGame(opts = {}) {
 
   function finish(cleared) {
     if (game.phase !== 'play') return;
-    const maxScore = game.maxScore || maxScoreFor(game.notes);
-    const pct = maxScore > 0 ? game.score / maxScore : 0;
     let grade = 'D';
     for (const g of GRADES) {
-      if (pct >= g.min) { grade = g.grade; break; }
+      if (game.score > g.min) { grade = g.grade; break; }
     }
     game.results = {
       cleared,
       failed: !cleared,
       grade,
-      scorePct: pct,
       score: game.score,
       maxCombo: game.maxCombo,
       counts: { ...game.counts },
@@ -203,7 +196,7 @@ export function createGame(opts = {}) {
     }
     game.spawnedIdx = 0;
     game.speed = speedForCombo(0);
-    game.maxScore = maxScoreFor(game.notes);
+    game.maxScore = SCORE_MAX;
     game.results = null;
     emit('onPhase', 'play');
     emit('onScore', game.score, 0);

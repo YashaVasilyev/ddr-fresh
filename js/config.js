@@ -57,15 +57,15 @@ export const HEALTH_DELTA = {
 };
 // Fail when health <= 0 (gate drop + fail sting, then results).
 
-// ---- Grades (by score % of the maximum possible score) ---------------------
+// ---- Grades (absolute score thresholds, as in the original) ----------------
 export const GRADES = [
-  { min: 95, grade: 'AAAA' },
-  { min: 90, grade: 'AAA' },
-  { min: 85, grade: 'AA' },
-  { min: 70, grade: 'A' },
-  { min: 55, grade: 'B' },
-  { min: 40, grade: 'C' },
-  { min: 0,  grade: 'D' },
+  { min: 999999, grade: 'AAAA' },
+  { min: 989999, grade: 'AAA' },
+  { min: 949999, grade: 'AA' },
+  { min: 799999, grade: 'A' },
+  { min: 649999, grade: 'B' },
+  { min: 499999, grade: 'C' },
+  { min: -Infinity, grade: 'D' },
 ];
 
 // ---- Chart / difficulty ----------------------------------------------------

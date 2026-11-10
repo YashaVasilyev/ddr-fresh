@@ -10,11 +10,14 @@ frame, "Destiny Eclipse" song). Mechanics are original, NOT a port of the Scratc
 - Keys: arrow keys. Judgment by |dt| at keypress vs note's hit time:
   Marvelous < 45 ms, Perfect < 90, Great < 135, Good < 180, else Miss when note passes
   the line unhit (window ±220 ms).
-- Score: base per tier (Marvelous 300, Perfect 200, Great 100, Good 50) × (1 + combo/50).
+- Score (matches the original game): per-note base = 1,000,000 / noteCount;
+  Marvelous pays base, Perfect base - 10, Great base/2 - 10, Good/Miss pay 0.
+  Combo does not multiply score.
 - Combo increments on Marvelous/Perfect/Great, resets on Good/Miss. Max combo tracked.
 - Health 0-100, starts 50: +2 Marvelous, +1.5 Perfect, +1 Great, -4 Good, -10 Miss.
   Fail at health <= 0 (gate drop + fail sting, then results). Clear at song end.
-- Grades by score%: AAAA >= 95%, AAA >= 90%, AA >= 85%, A >= 70%, B >= 55%, C >= 40%, else D.
+- Grades by absolute score: AAAA > 999999, AAA > 989999, AA > 949999, A > 799999,
+  B > 649999, C > 499999, else D.
 
 ## Chart (generated from scratch)
 - `tools/make_chart.py` analyzes `assets/55bc1042....wav` (PCM, stdlib wave) with a
