@@ -226,9 +226,9 @@ export class Renderer {
       ctx.drawImage(barImg, left, top, W, H);
     }
     ctx.restore();
-    // outline (centered on the rect edge)
+    // outline (centered on the rect edge), opaque white
     ctx.save();
-    ctx.strokeStyle = '#000';
+    ctx.strokeStyle = '#fff';
     ctx.lineWidth = T;
     ctx.strokeRect(left, top, W, H);
     ctx.restore();
