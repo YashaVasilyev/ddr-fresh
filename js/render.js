@@ -97,7 +97,7 @@ const FLASH_IMG = {
   perfect:   IMG.flashPerfect,
   great:     IMG.flashGreat,
 };
-const POP_SETTLE = 0.03;   // s to shrink 250% -> 200%
+const POP_SETTLE = 0.03;   // s to shrink 125% -> 100%
 const POP_HIDE = 0.5;      // s before fade-out starts
 const POP_FADE = 0.15;     // fade-out duration
 
@@ -236,12 +236,12 @@ export class Renderer {
   }
 
   // Judgment word popup. age = seconds since the judgment was shown.
-  // Pops in at 250% -> 200%, fades out after 0.5 s.
+  // Pops in at 125% -> 100% (half size), fades out after 0.5 s.
   drawJudgmentPopup(tier, age) {
     const j = JUDGE_POP[tier];
     if (!j || age == null || age < 0) return;
     if (age > POP_HIDE + POP_FADE) return;
-    const scale = age < POP_SETTLE ? 2.5 - (age / POP_SETTLE) * 0.5 : 2.0;
+    const scale = age < POP_SETTLE ? 1.25 - (age / POP_SETTLE) * 0.25 : 1.0;
     const alpha = age <= POP_HIDE ? 1 : Math.max(0, 1 - (age - POP_HIDE) / POP_FADE);
     this.drawSprite({ img: j.img, x: j.x, y: j.y, size: scale, alpha });
   }
