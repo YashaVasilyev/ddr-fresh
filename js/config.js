@@ -77,21 +77,8 @@ export const DIFFICULTIES = {
   Hard:   { label: 'Hard',   step: 1, jumps: true },  // all notes + jumps
 };
 
-// ---- Health bar layout (centered, y-up; layers bar < clip < frame) ---------
-export const HEALTH_BAR = {
-  y: 149,                                  // vertical center of the bar row
-  frameX: 0,
-  frameY: 149,                             // frame image centered at (0, 149)
-  scale: 2.03,
-  offset: -203,
-  barX: (health) => 2.03 * health - 203,   // health 100 -> 0, health 0 -> -203
-  clipX0: -261,                            // black clip covers x in [-261, -101]
-  clipX1: -101,
-  clipY: 149,
-  layerBar: 43,
-  layerClip: 45,
-  layerFrame: 46,
-};
+// ---- Health bar: drawn as a vector bar in render.js (241x50 px, 5 px outline,
+// centered at stage (0, 149); fill art clipped to the health fraction) --------
 
 // ---- Asset md5 file names --------------------------------------------------
 // All asset file names live in the MANIFEST in js/assets.js (keyed by md5ext).

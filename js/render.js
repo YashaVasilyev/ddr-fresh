@@ -83,9 +83,6 @@ const LANE_ROT_IDX = [180, 90, -90, 0]; // 0=left 1=down 2=up 3=right
 
 const HIT_LINE_Y = -120;          // DESIGN.md: receptors sit at stage y = -120
 const HEALTH_Y = 149;             // centered health gauge layout
-const HEALTH_BAR_SCALE = 2.03;    // bar x = 2.03*health - 203
-const HEALTH_CLIP_X0 = -261;      // black clip covers x in [-261, -101]
-const HEALTH_CLIP_X1 = -101;
 
 const JUDGE_POP = {
   marvelous: { img: IMG.jMarvelous, x: 0, y: 30 },
@@ -205,24 +202,38 @@ export class Renderer {
   // Centered health gauge (DESIGN.md): fill bar at x = 2.03*health-203, y = 149;
   // black clip rect covering x in [-261,-101]; frame image on top (bar < clip < frame).
   // At health 100 the rainbow bar cycles hue with songTime.
+  // Vector health bar: 241x50 px, 5 px outline, bar art clipped to the
+  // health fraction of the inner area (rainbow hue cycle when full).
   drawHealth(health, songTime) {
     const h = Math.max(0, Math.min(100, Number(health) || 0));
     const ctx = this.ctx;
-    const barX = HEALTH_BAR_SCALE * h - 203;
-    const full = h >= 100;
-    const barImg = full ? this.img(IMG.healthBarFull) : this.img(IMG.healthBar);
-    // 1) fill bar (203x21u, centered at barX, HEALTH_Y)
-    if (barImg && barImg.complete && barImg.naturalWidth > 0) {
-      const hue = full ? ((songTime || 0) * 120) % 360 : 0;
-      this.drawSprite({ img: barImg, x: barX, y: HEALTH_Y, size: 1, hue });
-    }
-    // 2) black clip covering x in [-261,-101], frame height tall
+    const W = 241, H = 50, T = 5;              // outer width/height, outline thickness (px)
+    const yC = HEALTH_Y;                       // centered at (0, 149)
+    const left = this.cx(-W / 2), top = this.cy(yC + H / 2);
+    // background
     ctx.save();
     ctx.fillStyle = '#000';
-    ctx.fillRect(this.cx(HEALTH_CLIP_X0), this.cy(HEALTH_Y + 29), HEALTH_CLIP_X1 - HEALTH_CLIP_X0, 58);
+    ctx.fillRect(left, top, W, H);
+    // fill, clipped to health fraction of the inner rect
+    const ix0 = -W / 2 + T, iw = W - 2 * T, ih = H - 2 * T;
+    const fw = iw * (h / 100);
+    const full = h >= 100;
+    const barImg = full ? this.img(IMG.healthBarFull) : this.img(IMG.healthBar);
+    if (barImg && barImg.complete && barImg.naturalWidth > 0 && fw > 0.5) {
+      const fx = this.cx(ix0), fy = this.cy(yC + H / 2 - T);
+      ctx.beginPath();
+      ctx.rect(fx, fy, fw, ih);
+      ctx.clip();
+      if (full) ctx.filter = `hue-rotate(${((songTime || 0) * 120) % 360}deg)`;
+      ctx.drawImage(barImg, fx, fy, iw, ih);
+    }
     ctx.restore();
-    // 3) frame on top (241x58u at 0,149)
-    this.drawSprite({ img: IMG.healthFrame, x: 0, y: HEALTH_Y, size: 1 });
+    // outline
+    ctx.save();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = T;
+    ctx.strokeRect(left + T / 2, top + T / 2, W - T, H - T);
+    ctx.restore();
   }
 
   // Judgment word popup. age = seconds since the judgment was shown.
