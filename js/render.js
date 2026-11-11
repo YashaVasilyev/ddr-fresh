@@ -111,9 +111,14 @@ const COMBO_LABEL_POS = { x: -45, y: -30 };
 export class Renderer {
   constructor(canvas, assets) {
     this.canvas = canvas;
-    canvas.width = STAGE_W;
-    canvas.height = STAGE_H;
+    // Render at device resolution (capped 2x) so the CSS-upscaled stage stays
+    // crisp instead of blocky; all drawing code keeps using 480x360 units.
+    const dpr = Math.min((typeof window !== 'undefined' && window.devicePixelRatio) || 1, 2);
+    this.dpr = dpr;
+    canvas.width = STAGE_W * dpr;
+    canvas.height = STAGE_H * dpr;
     this.ctx = canvas.getContext('2d');
+    this.ctx.scale(dpr, dpr);
     this.assets = assets || {}; // md5ext -> HTMLImageElement
   }
 
